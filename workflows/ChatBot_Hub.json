@@ -1,0 +1,350 @@
+{
+  "name": "ChatBot Hub",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3aaf0e25-39bf-4203-97ab-c75b609ae61b",
+              "name": "Question",
+              "value": "={{ $json.body.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -32,
+        16
+      ],
+      "id": "d1c02948-0bbf-4442-8ea1-a599ff273676",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.Question }}",
+        "options": {
+          "systemMessage": "=You are a helpful support assistant.\nAnswer only from the information in the vector store. Do not go off-topic.\nAlways be professional, positive, and specific. If the answer is not in the knowledge base, say so plainly and offer to escalate to a human.\n\nAnswer the following question by fetching data from the database:\n {{ $json.Question }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        16
+      ],
+      "id": "26b34965-2b99-4aed-8ca8-920af21b9f7a",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        64,
+        272
+      ],
+      "id": "d87f10e8-5478-4d57-8054-71936f901e7e",
+      "name": "OpenRouter Chat Model"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Fetch info from here",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "chatbotdata",
+          "mode": "list",
+          "cachedResultName": "chatbotdata"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        240
+      ],
+      "id": "7b6512ad-bfbe-41b8-84e2-7f4472d4f9ef",
+      "name": "Pinecone Vector Store"
+    },
+    {
+      "parameters": {
+        "modelName": "sentence-transformers/distiluse-base-multilingual-cased-v2",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        496,
+        448
+      ],
+      "id": "86affda0-0597-4687-b958-1cf6f39523a0",
+      "name": "Embeddings HuggingFace Inference"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatbot-hub",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -288,
+        16
+      ],
+      "id": "e90a5232-9e05-4524-8604-554281ab02bc",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        560,
+        16
+      ],
+      "id": "6792cdbe-514e-456e-bcea-7b7ff378f2d1",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $execution.id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        224
+      ],
+      "id": "db05e1d3-f004-494b-8655-d076ffecd7a8",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        848
+      ],
+      "id": "c44d3661-d2b2-4f21-aa34-b7f60f2956c2",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        64,
+        1056
+      ],
+      "id": "c3d5d777-3123-47fd-a8b7-39ef9fb9cd56",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "34442ad0-bfe9-488a-8149-5536dea21935",
+              "name": "Data",
+              "value": "Demo Support Knowledge Base — Acme Helpdesk (sample data)\n\n1. Product summary\nAcme Helpdesk is a fictional customer-support platform used in this demo. It helps support teams answer customer questions, track tickets, and follow up on unresolved chats.\n\n2. Plans and pricing\n- Starter: $29/month, 1 workspace, 500 tickets/month.\n- Growth: $99/month, 5 workspaces, 5,000 tickets/month, priority support.\n- Business: custom pricing, unlimited workspaces, SLA and a dedicated manager.\nAll plans include a 14-day free trial. No credit card is required to start a trial.\n\n3. Getting started\nSign up with a work email, create your first workspace, invite your team, and connect one support channel (email, web chat, or WhatsApp). Setup takes under 10 minutes.\n\n4. Tickets\nTickets can be opened by email, chat, or the web form. Each ticket has a status (open, pending, resolved), a priority (low, medium, high, urgent), and an owner. Urgent tickets are escalated to the on-call agent automatically.\n\n5. Support hours\nLive chat support runs Monday to Friday, 9:00 to 18:00 PKT. Email support is answered within one business day. The help center is available 24/7.\n\n6. Integrations\nAcme Helpdesk connects to Slack, HubSpot, and Zendesk. The Slack integration posts a message whenever an urgent ticket is created. The HubSpot integration syncs ticket status back to the contact record.\n\n7. Security\nData is encrypted in transit and at rest. Workspaces are isolated per team. Admins can enable two-factor authentication for all agents.\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -288,
+        848
+      ],
+      "id": "0bf9d597-bd04-47e2-bd9b-18fc5a2032b5",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "chatbotdata",
+          "mode": "list",
+          "cachedResultName": "chatbotdata"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        -80,
+        848
+      ],
+      "id": "b95f7854-e3d7-459f-a164-cba755b9f29b",
+      "name": "Pinecone Vector Store1"
+    },
+    {
+      "parameters": {
+        "modelName": "sentence-transformers/distiluse-base-multilingual-cased-v2",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        1040
+      ],
+      "id": "1dc1a966-43db-46f9-b5e1-c26a7ead4b27",
+      "name": "Embeddings HuggingFace Inference1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings HuggingFace Inference": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Pinecone Vector Store1",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings HuggingFace Inference1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "tags": []
+}
